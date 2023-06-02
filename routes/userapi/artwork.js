@@ -7,6 +7,8 @@ const mongoose = require('mongoose');
 const path = require('path');
 const upload = multer({ dest: 'uploads/artwork' });
 const mongo = require('mongodb');
+const notificationService = require('../../notifications/notificationService');
+const User = require('../../models/User');
 
 // Upload artwork
 router.post('/', passport.authenticate('jwt', { session: false }), upload.single('image'), async (req, res) => {
@@ -24,10 +26,13 @@ router.post('/', passport.authenticate('jwt', { session: false }), upload.single
       title: req.body.title,
       artist: req.body.artist,
       description: req.body.description,
-      createdby: req.user._id
+      createdby: req.user._id,
+      locked:true
     });
 
     await artwork.save();
+    const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " uploaded artwork!")
     res.json({ message: 'Artwork uploaded successfully', artwork });
   } catch (err) {
     console.error(err);

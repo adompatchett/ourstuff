@@ -4,7 +4,8 @@ const Product = require('../../models/Product');
 const passport = require('passport');
 const multer = require('multer');
 const path = require('path');
-
+const User = require('../../models/User');
+const notificationService = require('../../notifications/notificationService');
 // Multer configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -49,6 +50,8 @@ router.post('/', passport.authenticate('jwt', { session: false }), upload.single
     const { name, description, price } = req.body;
     const imageUrl = req.file.filename; // Get the uploaded image file path
     const product = new Product({ name, description, price, image: imageUrl, createdby: req.user.id });
+    const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " added something for sale!")
     await product.save();
     res.status(201).json({ message: 'Product created successfully', product });
   } catch (err) {

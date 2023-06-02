@@ -27,7 +27,9 @@ router.get('/all_id', async (req, res) => {
   router.get('/profile/:username', async (req,res)=>{
     
     const user = await User.findOne({username:req.params.username});
+    console.log(user);
     const secureuser = {};
+    secureuser.id = user._id;
     secureuser.firstname = user.firstname;
     secureuser.lastname = user.lastname;
     secureuser.username = user.username;
@@ -41,13 +43,35 @@ router.get('/all_id', async (req, res) => {
 
   })
 
-router.get('/:userId/profile-pic', async (req, res) => {
-    try {
-      const user = await User.findById(req.params.userId).select('profilepic');
+  router.get('/:id', async (req,res)=>{
+    
+    const user = await User.findOne({_id:req.params.id});
+    console.log(user);
+    const secureuser = {};
+    secureuser.id = user._id;
+    secureuser.firstname = user.firstname;
+    secureuser.lastname = user.lastname;
+    secureuser.username = user.username;
+    secureuser.location = user.location;
+    secureuser.biography = user.biography;
+    secureuser.joinedDate = user.joinedDate;
+    secureuser.website = user.website;
+    secureuser.sociallinks = user.sociallinks;
+    console.log(secureuser);
+    res.json({secureuser});
+
+  })
+
+router.get('/:username/profile-pic', async (req, res) => {
+   
+  try {
+      const user = await User.find({username:req.params.username}).select('profilepic');
+      
       if (!user) {
         return res.status(404).json({ error: 'User not found' });
       }
-      res.sendFile(path.join(__dirname,'../../uploads/users/' + user.profilepic));
+      
+      res.sendFile(path.join(__dirname,'../../uploads/users/' + user[0].profilepic));
     } catch (error) {
       console.error(error);
       res.status(500).json({ error: 'Server error' });

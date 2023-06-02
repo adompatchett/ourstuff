@@ -5,7 +5,8 @@ const Photo = require('../../models/Photo');
 const passport = require('passport');
 const router = express.Router();
 const multer = require('multer');
-
+const User = require('../../models/User');
+const notificationService = require('../../notifications/notificationService');
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
     cb(null, 'uploads/photo'); // Set the destination folder where the uploaded files will be stored
@@ -23,15 +24,20 @@ const upload = multer({ storage: storage });
 router.post('/', passport.authenticate('jwt', { session: false }), upload.single('photo'), async (req, res) => {
   try {
     const { filename, path, originalname } = req.file;
-    const photoData = fs.readFileSync(path); // Read the file from the disk
+     // Read the file from the disk
     const photo = new Photo({
       filename,
       path,
       originalname,
       createdby: req.user.id,
-      data: photoData, // Store the photo data in the 'data' field
+      title:req.body.title,
+      description:req.body.description,
+      tags:req.body.tags, // Store the photo data in the 'data' field
+      locked:true
     });
     const savedPhoto = await photo.save();
+    const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " added a photo!")
     res.status(201).json(savedPhoto);
   } catch (error) {
     console.error(error);
@@ -59,9 +65,6 @@ router.get('/:id', async (req, res) => {
     if (!photo) {
       return res.status(404).json({ message: 'Photo not found' });
     }
-
-    res.set('Content-Type', photo.contentType);
-    res.set('Content-Length', photo.data.length);
 
     res.sendFile(path.join(__dirname,"../../uploads/photo/" + photo.filename));
   } catch (error) {

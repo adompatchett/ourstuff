@@ -2,7 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Writing = require('../../models/Writing');
 const passport = require('passport');
-
+const notificationService = require('../../notifications/notificationService');
 // Get all writings
 router.get('/',passport.authenticate('jwt', { session: false }), async (req, res) => {
     try {
@@ -32,7 +32,7 @@ router.get('/',passport.authenticate('jwt', { session: false }), async (req, res
 router.post('/',passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
     
-    const { title, author, content, type } = req.body;
+    const { title, author, content, type,description,tags } = req.body;
 
     // Create a new writing entry
     const writing = new Writing({
@@ -40,12 +40,15 @@ router.post('/',passport.authenticate('jwt', { session: false }), async (req, re
       title,
       author,
       content,
-      createdby:req.user.id
+      createdby:req.user.id,
+      description,
+      tags
     });
 
     // Save the writing entry to the database
     await writing.save();
-
+    const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " wrote something!")
     res.json({ message: `${type} submitted successfully` });
   } catch (error) {
     console.error(error);
@@ -53,29 +56,7 @@ router.post('/',passport.authenticate('jwt', { session: false }), async (req, re
   }
 });
 
-// PUT /api/writing/:id
-router.put('/:id',passport.authenticate('jwt', { session: false }), async (req, res) => {
-    try {
-      const { id } = req.params;
-      const { type, title, author, content } = req.body;
-  
-      // Find the writing by ID and update its fields
-      const writing = await Writing.findByIdAndUpdate(
-        id,
-        { type, title, author, content },
-        { new: true }
-      );
-  
-      if (!writing) {
-        return res.status(404).json({ message: 'Writing not found' });
-      }
-  
-      res.json(writing);
-    } catch (error) {
-      console.error(error);
-      res.status(500).json({ message: 'Server Error' });
-    }
-  });
+
 
   // DELETE /api/writing/:id
 router.delete('/:id',passport.authenticate('jwt', { session: false }), async (req, res) => {

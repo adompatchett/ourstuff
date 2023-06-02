@@ -5,6 +5,10 @@ const jwt = require('jsonwebtoken');
 const config = require('../../config');
 const User = require('../../models/User');
 const bcrypt = require('bcrypt');
+const { v4: uuidv4 } = require('uuid');
+const googleSecret = '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';
+const { OAuth2Client } = require('google-auth-library');
+const client = new OAuth2Client('1091531683861-9o8r99n9v345ushn164fkmgb4e4i39a9.apps.googleusercontent.com', googleSecret);
 // Login route
 router.post('/login', passport.authenticate('local', { session: false }), async (req, res) => {
     
@@ -27,7 +31,7 @@ router.post('/login', passport.authenticate('local', { session: false }), async 
 
   router.get('/check-login', (req, res) => {
     const token = req.headers.authorization?.split(' ')[1];
-    
+    console.log(token);
     if (!token) {
       return res.status(401).json({ message: 'No token provided' });
     }
@@ -51,6 +55,12 @@ router.post('/login', passport.authenticate('local', { session: false }), async 
       res.json({userid:req.user.id});
 
     }
+
+  })
+
+  router.get('/getloggedinuserid',passport.authenticate('jwt', { session: false }), async (req,res)=>{
+
+    res.json({userid:req.user.id});
 
   })
 
@@ -81,7 +91,71 @@ router.post('/login', passport.authenticate('local', { session: false }), async 
       res.status(500).json({ message: 'Failed to create account' });
     }
   });
-  
+
+  async function verifyToken(token) {
+    try {
+      const ticket = await client.verifyIdToken({
+        idToken: token,
+        audience: '1091531683861-9o8r99n9v345ushn164fkmgb4e4i39a9.apps.googleusercontent.com',
+      });
+      const payload = ticket.getPayload();
+      // You can access the user information from the `payload` object
+      const userId = payload.sub;
+      const userEmail = payload.email;
+      // Perform additional validation or processing as needed
+      // ...
+      return {userId,userEmail}; // Token is valid
+    } catch (error) {
+      console.error('Error verifying token:', error);
+      return false; // Token is invalid
+    }
+  }
+
+router.post('/google/login', async (req, res) => {
+  // Handle Google login route
+  try { 
+   
+    // Validate the JWT credentials, authenticate the user, and generate a new JWT token
+    const tokenhealth = await verifyToken(req.body.jwtCredentials);
+    
+    if(!tokenhealth){
+
+      return res.status(401).json({"message":"Not Authorized!"});
+
+    }
+
+    const result = await User.findOne({email:tokenhealth.userEmail,sub:tokenhealth.userId});
+  if(result){
+    console.log(result);
+    const token = jwt.sign({ userId: result._id }, config.secretKey, {
+      expiresIn: '24h',
+    });
+
+    res.json({ message: 'Login successful', token });
+
+  }else{
+    
+    const username = uuidv4();
+    const user = new User({email:tokenhealth.userEmail,sub:tokenhealth.userId,username});
+    
+    await user.save();
+
+    const token = await jwt.sign({ userId: user._id }, config.secretKey, {
+      expiresIn: '24h',
+    });
+
+    res.json({ message: 'Account created successfully', token });
+
+  }
+    
+  } catch (error) {
+    console.error(error);
+    res.status(500).json({ message: 'Server error' });
+  }
+});
+
+
+
 // Logout route
 router.post('/logout', (req, res) => {
   req.logout(()=>{

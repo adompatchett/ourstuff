@@ -2,28 +2,41 @@ const express = require('express');
 const User = require('../../models/User');
 
 const router = express.Router();
-
-// Search friends by username or email
+const notificationService = require('../../notifications/notificationService');
 router.get('/search', async (req, res) => {
   try {
+    
     const { query } = req.query;
 
-    // Find users matching the query
-    const users = await User.find({
-      $or: [
-        { username: { $regex: query, $options: 'i' } }, // Case-insensitive search by username
-        { email: { $regex: query, $options: 'i' } }, // Case-insensitive search by email
-      ],
-    });
+    if (!query || query.trim().length === 0) {
+      // Handle empty or whitespace-only search query
+      return res.status(400).json({ message: 'Empty search query' });
+    }
+    
+    const users = await User.find(
+      {
+        $and: [
+          { $or: [
+              { username: { $regex: query, $options: 'i' } } // Case-insensitive search by username
+            ]
+          },
+          { $where: `this.username.trim().length > 0` } // Exclude documents with empty usernames
+        ]
+      },
+      { username: 1 } // Projection to include only the username field
+    ).collation({ locale: 'en', strength: 2 }); // Ensure case-insensitive search with accent insensitivity
+    
+    // Further processing of the search results
 
-    // Return the matching users
-    res.json({ users });
+    // Return the matching usernames
+    const usernames = users.map(user => user.username);
+    console.log(usernames);
+    res.json({ usernames });
   } catch (error) {
     console.error('Error searching friends:', error);
     res.status(500).json({ message: 'Error searching friends' });
   }
 });
-
 // Get a user's friends
 router.get('/:userId', async (req, res) => {
   try {

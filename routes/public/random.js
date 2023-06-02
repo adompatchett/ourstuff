@@ -55,6 +55,12 @@ router.get('/photo/random', async (req, res) => {
   }
 });
 
+router.get('/photo/data/:id',async (req,res)=>{
+
+  const photography = await Photography.findById(req.params.id);
+  res.json({photography});
+})
+
 router.get('/photo/single/:id', async (req,res) =>{
 
     try{
@@ -85,6 +91,13 @@ router.get('/artwork/random', async (req, res) => {
     res.status(500).json({ message: 'Failed to retrieve random artwork' });
   }
 });
+
+router.get('/artwork/data/:id', async(req,res)=>{
+
+  const artwork = await Artwork.findById(req.params.id);
+  res.json({artwork});
+
+})
 
 router.get('/artwork/single/:id', async (req, res) => {
     try {
@@ -128,6 +141,13 @@ router.get('/store/single/:id', async (req,res) =>{
 
 })
 
+router.get('/store/data/:id',async(req,res)=>{
+
+  const product = await Product.findById(req.params.id);
+  res.json({product});      
+
+})
+
 // Get a random blog
 router.get('/blog/random', async (req, res) => {
   try {
@@ -157,7 +177,7 @@ router.get('/writing/random', async (req, res) => {
 router.get('/writing/single/:id',async (req,res)=>{
 
     const writing = await Writing.findById(req.params.id);
-    res.json(writing);
+    res.json({writing});
             
 
 })
@@ -190,6 +210,13 @@ router.get('/podcast/random', async (req, res) => {
         }
     
     })
+
+    router.get('/podcast/data/:id',async(req,res)=>{
+
+      const podcast = await Podcast.findById(req.params.id);
+      res.json({podcast});      
+
+    })
     
     // Get a random music track
     router.get('/audio/random', async (req, res) => {
@@ -218,6 +245,13 @@ router.get('/podcast/random', async (req, res) => {
     
         }
     
+    })
+
+    router.get('/audio/data/:id',async(req,res)=>{
+
+      const audio = await Music.findById(req.params.id);
+      res.json({audio});      
+
     })
     
     // Get a random user

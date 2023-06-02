@@ -18,14 +18,14 @@ router.get('/', async (req, res) => {
 
   try {
     // Perform search across multiple collections based on the search query
-    const musicResults = await Audio.find({ fileName: { $regex: searchQuery, $options: 'i' } });
-    const videoResults = await Video.find({ filename: { $regex: searchQuery, $options: 'i' } });
-    const photoResults = await Photo.find({ filename: { $regex: searchQuery, $options: 'i' } });
-    const writingResults = await Writing.find({ title: { $regex: searchQuery, $options: 'i' } });
-    const blogResults = await Blog.find({ title: { $regex: searchQuery, $options: 'i' } });
-    const storeResults = await Product.find({ name: { $regex: searchQuery, $options: 'i' } });
+    const musicResults = await Audio.find({ tags: { $regex: searchQuery, $options: 'i' } });
+    const videoResults = await Video.find({ tags: { $regex: searchQuery, $options: 'i' } });
+    const photoResults = await Photo.find({ tags: { $regex: searchQuery, $options: 'i' } });
+    const writingResults = await Writing.find({ tags: { $regex: searchQuery, $options: 'i' } });
+    const blogResults = await Blog.find({ tags: { $regex: searchQuery, $options: 'i' } });
+    const storeResults = await Product.find({ tags: { $regex: searchQuery, $options: 'i' } });
     const userResults = await User.find({ username: { $regex: searchQuery, $options: 'i' } });
-    const podcastResults = await Podcast.find({ description: { $regex: searchQuery, $options: 'i' } });
+    const podcastResults = await Podcast.find({ tags: { $regex: searchQuery, $options: 'i' } });
 
     // Combine and send the search results as a response
     const results = {

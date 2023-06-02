@@ -5,7 +5,7 @@ const Video = require('../../models/Video');
 const fs = require('fs');
 const passport = require('passport');
 const path = require('path');
-
+const notificationService = require('../../notifications/notificationService');
 // Set up Multer storage
 const storage = multer.diskStorage({
   destination: function (req, file, cb) {
@@ -20,7 +20,7 @@ const storage = multer.diskStorage({
 const upload = multer({ storage: storage });
 
 // POST route for video upload
-router.post('/', passport.authenticate('jwt', { session: false }),upload.single('file'), async (req, res) => {
+router.post('/', passport.authenticate('jwt', { session: false }), upload.single('file'), async (req, res) => {
   try {
     console.log(req.file);
     if (!req.file) {
@@ -31,8 +31,13 @@ router.post('/', passport.authenticate('jwt', { session: false }),upload.single(
       filename: req.file.filename,
       originalName: req.file.originalname,
       createdby: req.user.id, // Assuming the authenticated user ID is available in req.user.id
+      title: req.body.title,
+      description: req.body.description,
+      tags: req.body.tags,
     });
     await video.save();
+    const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " uploaded a video!")
 
     res.json({ message: 'Video uploaded successfully', video });
   } catch (error) {
@@ -42,9 +47,10 @@ router.post('/', passport.authenticate('jwt', { session: false }),upload.single(
 });
 
 // GET route for retrieving all videos
-router.get('/',passport.authenticate('jwt', { session: false }), async (req, res) => {
+router.get('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
-    const videos = await Video.find({createdby:req.user.id});
+    const videos = await Video.find({ createdby: req.user.id });
+    console.log(videos);
     res.json(videos);
   } catch (error) {
     console.error('Failed to retrieve videos', error);
@@ -60,10 +66,8 @@ router.get('/:id', async (req, res) => {
       return res.status(404).json({ message: 'Video not found' });
     }
 
-    const filePath = path.join(__dirname,`../../uploads/video/${video.filename}`);
+    const filePath = path.join(__dirname, `../../uploads/video/${video.filename}`);
     const stat = fs.statSync(filePath);
-
-    
 
     res.sendFile(filePath);
   } catch (error) {
@@ -72,4 +76,40 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-module.exports = router;
+router.get('/data/:id',async (req,res)=>{
+
+  const video = await Video.findById(req.params.id);
+  res.json(video);
+
+})
+
+// DELETE route for deleting a video by ID
+router.delete('/:id', passport.authenticate('jwt', { session: false }), async (req, res) => {
+  try {
+    const video = await Video.findById(req.params.id);
+    if (!video) {
+      return res.status(404).json({ message: 'Video not found' });
+    }
+
+    // Check if the authenticated user is the owner of the video
+    if (video.createdby.toString() !== req.user.id) {
+      return res.status(403).json({ message: 'Not authorized to delete this video' });
+    }
+
+        // Delete the video file from the storage
+        const filePath = path.join(__dirname, `../../uploads/video/${video.filename}`);
+        fs.unlinkSync(filePath);
+    
+        // Remove the video from the database
+        await Video.deleteOne(video._id);
+    
+        res.json({ message: 'Video deleted successfully' });
+      } catch (error) {
+        console.error('Failed to delete video', error);
+        res.status(500).json({ message: 'Failed to delete video' });
+      }
+    });
+    
+    module.exports = router;
+    
+

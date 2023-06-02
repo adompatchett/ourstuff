@@ -56,22 +56,18 @@ router.post('/settings/profile-pic',passport.authenticate('jwt', { session: fals
   }
 });
 
-router.post('/settings/profile/:id',passport.authenticate('jwt', { session: false }), async (req,res)=>{
-  
-  const user = await User.findById(req.params.id);
-  if(user._id !== req.user.id){
+router.post('/settings/profile',passport.authenticate('jwt', { session: false }), async (req,res)=>{
+ 
+  const user = await User.findById(req.user.id);
 
-    return res.status(401).json({"message":"Not authorized!"});
+  user.username = req.body.username;
+  user.location = req.body.location;
+  user.website = req.body.website;
+  user.biography = req.body.biography;
 
-  }
-
-  const profileData = req.body;
-
-  // Create a new User instance with the profile data
-  user = User(profileData);
 
   // Save the user to the database
-  newUser.save()
+  user.save()
     .then(() => {
       res.json({ message: 'User profile saved successfully' });
     })

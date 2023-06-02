@@ -5,7 +5,8 @@ const fs = require('fs');
 const path = require('path');
 const Podcast = require('../../models/Podcast');
 const passport = require('passport');
-
+const User = require('../../models/User');
+const notificationService = require('../../notifications/notificationService');
 // Set up multer storage configuration
 const storage = multer.diskStorage({
   destination: (req, file, cb) => {
@@ -29,11 +30,15 @@ router.post('/',passport.authenticate('jwt', { session: false }), upload.single(
       originalName: req.file.originalname,
       title: req.body.title,
       description: req.body.description,
-      createdby:req.user.id
+      createdby:req.user.id,
+      tags:req.body.tags,
+      locked:true
     });
     await podcast.save();
 
     res.json({ message: 'Podcast uploaded successfully', podcast });
+    const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " created a podcast!")
   } catch (err) {
     console.error(err);
     res.status(500).json({ message: 'Failed to upload podcast' });
@@ -67,25 +72,6 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update a podcast by ID
-router.put('/:id',passport.authenticate('jwt', { session: false }), async (req, res) => {
-  try {
-    const podcast = await Podcast.findById(req.params.id);
-    if (!podcast) {
-      return res.status(404).json({ message: 'Podcast not found' });
-    }
-
-    podcast.title = req.body.title;
-    podcast.description = req.body.description;
-    await podcast.save();
-
-    res.json({ message: 'Podcast updated successfully', podcast });
-  } catch (err) {
-    console.error(err);
-    res.status(500).json({ message: 'Failed to update podcast' });
-  }
-});
-
 // Delete a podcast by ID
 router.delete('/:id',passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
@@ -94,7 +80,7 @@ router.delete('/:id',passport.authenticate('jwt', { session: false }), async (re
       return res.status(404).json({ message: 'Podcast not found' });
     }
 
-    const filePath = path.join(__dirname, '../uploads/podcasts', podcast.filename);
+    const filePath = path.join(__dirname, '../../uploads/podcast', podcast.filename);
     fs.unlinkSync(filePath); // Delete the podcast file from the file system
 
     await podcast.deleteOne(); // Delete the podcast document from the collection

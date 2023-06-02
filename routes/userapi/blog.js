@@ -3,7 +3,7 @@ const router = express.Router();
 const Blog = require('../../models/Blog');
 const User = require('../../models/User');
 const passport = require('passport');
-
+const notificationService = require('../../notifications/notificationService');
 // Get all blog posts
 router.get('/',passport.authenticate('jwt', { session: false }), async (req, res) => {
   try {
@@ -31,11 +31,13 @@ router.get('/:id',passport.authenticate('jwt', { session: false }), async (req, 
 
 router.post('/', passport.authenticate('jwt', { session: false }), async (req, res) => {
     try {
-      const { title, content } = req.body;
+      const { title, content,description,tags } = req.body;
+      console.log(req.body);
       const author = req.user._id;
-      const newBlog = new Blog({ title, content,author,createdby:req.user.id});
+      const newBlog = new Blog({ title, content, description, tags, author,createdby:req.user.id,locked:true});
       const savedBlog = await newBlog.save();
-  
+      const username = await User.findById(req.user.id);
+    notificationService.sendNotificationToFollowers(req.user.id,username.username + " wrote a blog post!")
       res.json(savedBlog);
     } catch (error) {
       console.error(error);
